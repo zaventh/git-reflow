@@ -47,7 +47,7 @@ init() {
 usage() {
 	echo "usage: git flow release [list] [-v]"
 	echo "       git flow release start [-F] <version> [<base>]"
-	echo "       git flow release finish [-FsumpkS] <version>"
+	echo "       git flow release finish [-Fsumpk] <version>"
 	echo "       git flow release publish <name>"
 	echo "       git flow release track <name>"
 }
@@ -196,7 +196,6 @@ cmd_finish() {
 	DEFINE_boolean push false "push to $ORIGIN after performing finish" p
 	DEFINE_boolean keep false "keep branch after performing finish" k
 	DEFINE_boolean notag false "don't tag this release" n
-	DEFINE_boolean squash false "squash release during merge" S
 
 	parse_args "$@"
 	require_version_arg
@@ -228,15 +227,9 @@ cmd_finish() {
 	if ! git_is_branch_merged_into "$BRANCH" "$MASTER_BRANCH"; then
 		git_do checkout "$MASTER_BRANCH" || \
 		  die "Could not check out $MASTER_BRANCH."
-		if noflag squash; then
-			git_do merge --no-ff "$BRANCH" || \
-				die "There were merge conflicts."
-				# TODO: What do we do now?
-		else
-			git_do merge --squash "$BRANCH" || \
-				die "There were merge conflicts."
-			git_do commit
-		fi
+
+		git_do merge "$BRANCH" || \
+			die "There were merge conflicts. Master branch is tainted."
 	fi
 
 	if noflag notag; then
@@ -259,27 +252,20 @@ cmd_finish() {
 	# in case a previous attempt to finish this release branch has failed,
 	# but the merge into develop was successful, we skip it now
 	if ! git_is_branch_merged_into "$BRANCH" "$DEVELOP_BRANCH"; then
+
 		git_do checkout "$DEVELOP_BRANCH" || \
 		  die "Could not check out $DEVELOP_BRANCH."
 
-		# TODO: Actually, accounting for 'git describe' pays, so we should
-		# ideally git merge --no-ff $tagname here, instead!
-		if noflag squash; then
-			git_do merge --no-ff "$BRANCH" || \
-				die "There were merge conflicts."
-				# TODO: What do we do now?
-		else
-			git_do merge --squash "$BRANCH" || \
-				die "There were merge conflicts."
-				# TODO: What do we do now?
-			git_do commit
-		fi
+		git_do merge "$BRANCH" || \
+		 die "There were merge conflicts. Please fix them and re-run release finish."
 	fi
 
 	# delete branch
 	if noflag keep; then
-		if [ "$BRANCH" = "$(git_current_branch)" ]; then
+		if flag notag; then
 			git_do checkout "$MASTER_BRANCH"
+		else
+			git_do checkout -q "$tagname"
 		fi
 		git_do branch -d "$BRANCH"
 	fi
@@ -313,6 +299,9 @@ cmd_finish() {
 	if flag push; then
 		echo "- '$DEVELOP_BRANCH', '$MASTER_BRANCH' and tags have been pushed to '$ORIGIN'"
 		echo "- Release branch '$BRANCH' in '$ORIGIN' has been deleted."
+	fi
+	if noflag notag; then
+		echo "- You are now on tag '$tagname'. This is where you want to cut the actual binary."
 	fi
 	echo
 }

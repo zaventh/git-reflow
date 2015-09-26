@@ -50,6 +50,9 @@ fi
 export GITFLOW_DIR=$(dirname "$(echo "$0" | sed -e 's,\\,/,g')")
 
 usage() {
+	echo "git reflow v0.1 by Jeff Mixon"
+	echo "	based on git flow by Vincent Driessen"
+	echo
 	echo "usage: git flow <subcommand>"
 	echo
 	echo "Available subcommands are:"
