@@ -231,8 +231,8 @@ cmd_start() {
 
 cmd_finish() {
 	DEFINE_boolean keep false "keep branch after performing finish" k
-	DEFINE_boolean nosquash false S
-	DEFINE_boolean norebase false R
+	DEFINE_boolean nosquash false "don't squash down into one commit" S
+	DEFINE_boolean norebase false "don't rebase before merging" R
 	parse_args "$@"
 	expand_nameprefix_arg_or_current
 
